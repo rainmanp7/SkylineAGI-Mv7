@@ -12,3 +12,9 @@ So we must use a simple structure format already
 supported by python and other programing languages.
 
 The corrected working validated files.
+as of Mon Dec16 2024
+
+SQLITE3 database = skyline_agi.db
+agi_config.py
+database_manager.py
+config.json
