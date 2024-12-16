@@ -58,7 +58,6 @@
   "model_save_dir": "./models",
   "num_parallel_jobs": 4,
   "database": {
-    "knowledge_base_path": "knowledge_base",
-    "domain_dataset_config": "domain_dataset.json"
+    "database_path": "skyline_agi.db"
   }
 }
