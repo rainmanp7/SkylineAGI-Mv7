@@ -7,6 +7,7 @@ These files are tested and working.
 Tested against real world data.
 
 Working files and standalone test code = validated
+
 validated = has built in working solo test code.
 
 agi_config.py -validated
