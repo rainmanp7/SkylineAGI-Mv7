@@ -1,24 +1,51 @@
 # SkylineAGI-Mv7
 Skyline Artificial General intelligence. AGI Machine Learning Model
 
-Convert from CSV to one single sqlite3
-the reason is from testing I incountered situations 
-where the csv file required to be to specific and would
-have coding issues about it's configuration or any configuration.
-to get prototype working and finish the internals.
-i need a really easy way to get the information in such a way
-that's not easy to mess up for any reason.
-So we must use a simple structure format already
-supported by python and other programing languages.
+Working files and 
+Working with SQLite3 database.
+These files are tested and working.
+Tested against real world data.
 
-The corrected working validated files.
-as of Mon Dec16 2024
+Working files and standalone test code = validated
 
-SQLITE3 database = skyline_agi.db
+agi_config.py -validated
 
-agi_config.py
+database_manager.py -validated
 
-database_manager.py
+config.json -validated
 
-config.json
+cache_utils.py -validated
+
+logging_config.py -validated
+
+uncertainty_quantification.py -validated
+
+internal_process_monitor.py -validated
+
+parallel_utils.py -validated
+
+complexity.py -validated
+
+memory_manager.py -validated
+
+parallel_bayesian_optimization.py -validated
+
+cache_utils.py -validated
+
+metacognitive_manager.py -validated
+
+cross_domain_generalization.py
+
+assimilation_memory_module.py
+
+cross_domain_evaluation.py
+
+attention_mechanism.py -validated
+
+main.py
+
+models.py -validated
+
+async_process_manager.py -validated
+
 
