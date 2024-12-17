@@ -2,6 +2,12 @@
 
 import json
 from typing import Dict, Any, Optional
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s")
+
+_config_executed = False  # Flag to prevent duplicate execution
 
 class AGIConfiguration:
     def __init__(self, config_path: str = 'config.json'):
@@ -15,13 +21,19 @@ class AGIConfiguration:
         :return: Configuration dictionary.
         """
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"Error: Configuration file not found - {config_path}")
+            logging.error(f"Configuration file not found - {config_path}")
             return {}
         except json.JSONDecodeError as e:
-            print(f"Error decoding JSON from configuration file - {config_path}: {e}")
+            logging.error(f"Error decoding JSON from configuration file - {config_path}: {e}")
+            return {}
+        except UnicodeDecodeError as e:
+            logging.error(f"Error decoding configuration file (UTF-8 expected) - {config_path}: {e}")
+            return {}
+        except Exception as e:
+            logging.error(f"An unexpected error occurred while loading the configuration file - {config_path}: {e}")
             return {}
 
     def get_dynamic_setting(self, key: str, default: Optional[Any] = None) -> Any:
@@ -68,8 +80,9 @@ class AGIConfiguration:
 
 
 # Proof of functionality when executed directly
-if __name__ == "__main__":
-    print("AGI Configuration File Triggered")
+if __name__ == "__main__" and not _config_executed:
+    _config_executed = True  # Set the flag to True
+    logging.info("AGI Configuration File Triggered")
     
     # Initialize the configuration
     agi_config = AGIConfiguration()
@@ -80,8 +93,8 @@ if __name__ == "__main__":
     knowledge_base_path = agi_config.get_knowledge_base_path()
     domain_dataset_config = agi_config.get_domain_dataset_config()
     
-    print("Database Settings:", database_settings)
-    print("Database Path:", database_path)
-    print("Knowledge Base Path:", knowledge_base_path)
-    print("Domain Dataset Config Path:", domain_dataset_config)
-    print("Proof of functionality: AGI Configuration loaded and operational.")
+    logging.info("Database Settings: %s", database_settings)
+    logging.info("Database Path: %s", database_path)
+    logging.info("Knowledge Base Path: %s", knowledge_base_path)
+    logging.info("Domain Dataset Config Path: %s", domain_dataset_config)
+    logging.info("Proof of functionality: AGI Configuration loaded and operational.")
