@@ -42,12 +42,11 @@ The following files have been tested, validated, and confirmed to be error-free:
 ### Unvalidated Changing Files  
 The following files are under active development and testing:  
 
-- `[File1].py` 
-*(cross_domain_generalization.py)*  
-*(assimilation_memory_module.py)*
-*(cross_domain_evaluation.py)*
-*(main.py)*
-- `[File2].py`  
+- `[cross_domain_generalization].py`
+- `[cross_domain_generalization].py`
+- `[assimilation_memory_module].py`
+- `[cross_domain_evaluation].py`
+- `[main].py`
 
 > *Note: Unvalidated files may contain errors, warnings, or incomplete implementations. These will be updated progressively.*  
 
