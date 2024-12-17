@@ -43,7 +43,6 @@ The following files have been tested, validated, and confirmed to be error-free:
 The following files are under active development and testing:  
 
 - `[cross_domain_generalization].py`
-- `[cross_domain_generalization].py`
 - `[assimilation_memory_module].py`
 - `[cross_domain_evaluation].py`
 - `[main].py`
