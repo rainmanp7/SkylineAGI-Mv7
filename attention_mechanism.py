@@ -1,10 +1,9 @@
-
-# attention_mechanism.py
+# proof_attention_mechanism.py
 # Created Nov 14th 2024
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, input_size, num_heads, dropout_rate=0.1):
@@ -68,3 +67,25 @@ class ContextAwareAttention(nn.Module):
         output = self.dropout(context_vector)
 
         return output
+
+def main():
+    # Example usage of MultiHeadAttention
+    input_size = 128
+    num_heads = 8
+    batch_size = 4
+    sequence_length = 10
+
+    multi_head_attention = MultiHeadAttention(input_size, num_heads)
+    input_tensor = torch.randn(batch_size, sequence_length, input_size)
+    output_tensor = multi_head_attention(input_tensor)
+    print("MultiHeadAttention Output Shape:", output_tensor.shape)
+
+    # Example usage of ContextAwareAttention
+    context_size = 64
+    context_aware_attention = ContextAwareAttention(input_size, context_size)
+    context_tensor = torch.randn(batch_size, context_size)
+    output_tensor = context_aware_attention(input_tensor, context_tensor)
+    print("ContextAwareAttention Output Shape:", output_tensor.shape)
+
+if __name__ == "__main__":
+    main()
