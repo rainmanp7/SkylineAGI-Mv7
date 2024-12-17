@@ -4,9 +4,6 @@
 **Skyline Artificial General Intelligence**  
 Version: MV7  
 
-Construction location:
-Maliguya, Sinoron, Santacruz, Davao Del Sur, Mindanao, Philippines.
-
 ## Overview  
 SkylineAGI MV7 is a validated and modular implementation of Artificial General Intelligence concepts. This release marks a significant improvement over the previous version (SkylineAGI6) by transitioning from a CSV-based database to a SQLite database for improved performance, testing, and scalability.  
 
