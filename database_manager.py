@@ -1,15 +1,17 @@
-# database_manager.py
-
 import sqlite3
 import os
 from typing import List, Tuple, Any, Optional
 from agi_config import AGIConfiguration
+import logging
+
+# Setting up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class DatabaseManager:
     def __init__(self, config_path: str = 'config.json'):
         self.config = AGIConfiguration(config_path)
         self.database_path = self.config.get_database_path()
-        print(f"Database Path: {self.database_path}")  # Debug print
+        logging.info(f"Database Path: {self.database_path}")  # Debug print
         self.connection = self.connect_to_database()
 
     def connect_to_database(self) -> Optional[sqlite3.Connection]:
@@ -19,13 +21,13 @@ class DatabaseManager:
         :return: SQLite connection object or None if connection fails.
         """
         if not os.path.isfile(self.database_path):
-            print(f"Error: Database file not found - {self.database_path}")
+            logging.error(f"Error: Database file not found - {self.database_path}")
             return None
         try:
             connection = sqlite3.connect(self.database_path)
             return connection
         except sqlite3.Error as e:
-            print(f"Error connecting to database: {e}")
+            logging.error(f"Error connecting to database: {e}")
             return None
 
     def get_table_names(self) -> List[str]:
@@ -42,7 +44,7 @@ class DatabaseManager:
             tables = cursor.fetchall()
             return [table[0] for table in tables]
         except sqlite3.Error as e:
-            print(f"Error retrieving table names: {e}")
+            logging.error(f"Error retrieving table names: {e}")
             return []
 
     def load_domain_dataset(self, table_name: str) -> List[Tuple[Any, ...]]:
@@ -60,7 +62,7 @@ class DatabaseManager:
             dataset = cursor.fetchall()
             return dataset
         except sqlite3.Error as e:
-            print(f"Error loading dataset from table {table_name}: {e}")
+            logging.error(f"Error loading dataset from table {table_name}: {e}")
             return []
 
     def update_domain_data(self, table_name: str, data: Tuple[Any, ...]):
@@ -88,7 +90,7 @@ class DatabaseManager:
             cursor.execute(query, data)
             self.connection.commit()
         except sqlite3.Error as e:
-            print(f"Error updating data in table {table_name}: {e}")
+            logging.error(f"Error updating data in table {table_name}: {e}")
 
     def get_recent_updates(self) -> List[Tuple[str, Tuple[Any, ...]]]:
         """
@@ -111,10 +113,10 @@ class DatabaseManager:
                     cursor.execute(f"SELECT * FROM {table_name} ORDER BY id DESC LIMIT 1;")
                     recent_updates.append((table_name, cursor.fetchone()))
                 except sqlite3.Error as e:
-                    print(f"Error retrieving recent updates from table {table_name}: {e}")
+                    logging.error(f"Error retrieving recent updates from table {table_name}: {e}")
             return recent_updates
         except sqlite3.Error as e:
-            print(f"Error retrieving recent updates: {e}")
+            logging.error(f"Error retrieving recent updates: {e}")
             return []
 
     def close_connection(self):
@@ -128,11 +130,11 @@ class DatabaseManager:
 if __name__ == "__main__":
     db_manager = DatabaseManager()
     table_names = db_manager.get_table_names()
-    print("Table Names:", table_names)
+    logging.info("Table Names: %s", table_names)
     
     # Example: Load a dataset from a specific table
     domain_data = db_manager.load_domain_dataset('knowledge_base')
-    print("Domain Data (knowledge_base):", domain_data)
+    logging.info("Domain Data (knowledge_base): %s", domain_data)
     
     # Example: Update a dataset in a specific table
     # Ensure the number of values matches the number of columns in the table (excluding 'id')
@@ -141,6 +143,6 @@ if __name__ == "__main__":
     
     # Example: Retrieve recent updates
     recent_updates = db_manager.get_recent_updates()
-    print("Recent Updates:", recent_updates)
+    logging.info("Recent Updates: %s", recent_updates)
     
     db_manager.close_connection()
