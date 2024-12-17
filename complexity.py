@@ -1,5 +1,6 @@
-# complexity.py updated 12/14/2024
-# imports corrected.
+# complexity.py
+# Updated Dec 14, 2024
+
 from enum import Enum
 from typing import Any, Callable, List
 import numpy as np
@@ -51,12 +52,11 @@ class ComplexityMetrics:
     """Advanced complexity analysis with multiple computational strategies"""
     
     @staticmethod
-    def calculate_entropy(text: str) -> float:
-        """Calculate Shannon entropy to measure text complexity and randomness."""
+    def calculate_entropy(data: np.ndarray) -> float:
+        """Calculate Shannon entropy to measure data complexity and randomness."""
         try:
-            ascii_values = [ord(char) for char in text]
-            unique, counts = np.unique(ascii_values, return_counts=True)
-            probabilities = counts / len(ascii_values)
+            unique, counts = np.unique(data, return_counts=True)
+            probabilities = counts / len(data)
             entropy = -np.sum(probabilities * np.log2(probabilities + 1e-10))
             return entropy
         except Exception as e:
@@ -64,13 +64,12 @@ class ComplexityMetrics:
             return 0
 
     @staticmethod
-    def calculate_variance_complexity(text: str) -> float:
-        """Calculate complexity based on variance of ASCII values."""
+    def calculate_variance_complexity(data: np.ndarray) -> float:
+        """Calculate complexity based on variance of data."""
         try:
-            ascii_values = np.array([ord(char) for char in text])
-            variance = np.var(ascii_values)
-            skewness = stats.skew(ascii_values)
-            kurtosis = stats.kurtosis(ascii_values)
+            variance = np.var(data)
+            skewness = stats.skew(data)
+            kurtosis = stats.kurtosis(data)
             
             # Combine multiple statistical measures
             complexity_score = (
@@ -86,24 +85,32 @@ class ComplexityMetrics:
 class AdvancedComplexityFactor:
     """Comprehensive complexity analysis with multiple metrics."""
     
-    def __init__(self, custom_complexity_func: Callable[[str], int] = None):
+    def __init__(self, custom_complexity_func: Callable[[np.ndarray], float] = None):
         """Initialize with optional custom complexity calculation."""
         self.custom_complexity_func = custom_complexity_func
         self.metrics_log = []
 
-    def calculate(self, text: str) -> int:
+    def calculate(self, X: np.ndarray, y: np.ndarray) -> int:
         """Comprehensive complexity calculation."""
         try:
-            # Calculate multiple complexity metrics from the text
+            # Flatten the data for entropy and variance calculations
+            X_flat = X.flatten()
+            y_flat = y.flatten()
+
+            # Calculate multiple complexity metrics from the data
             metrics = {
-                'entropy': ComplexityMetrics.calculate_entropy(text),
-                'variance': ComplexityMetrics.calculate_variance_complexity(text),
+                'entropy_X': ComplexityMetrics.calculate_entropy(X_flat),
+                'entropy_y': ComplexityMetrics.calculate_entropy(y_flat),
+                'variance_X': ComplexityMetrics.calculate_variance_complexity(X_flat),
+                'variance_y': ComplexityMetrics.calculate_variance_complexity(y_flat),
             }
 
             # Custom complexity function if provided
             if self.custom_complexity_func:
-                custom_complexity = self.custom_complexity_func(text)
-                metrics['custom'] = custom_complexity
+                custom_complexity_X = self.custom_complexity_func(X_flat)
+                custom_complexity_y = self.custom_complexity_func(y_flat)
+                metrics['custom_X'] = custom_complexity_X
+                metrics['custom_y'] = custom_complexity_y
 
             # Aggregate complexity metrics
             total_complexity = sum(metrics.values())
@@ -142,9 +149,9 @@ class AdvancedComplexityFactor:
             logging.error(f"Complexity log export error: {e}")
 
 # Example custom complexity function (optional)
-def custom_text_complexity(text: str) -> float:
+def custom_text_complexity(data: np.ndarray) -> float:
     """Example of a custom complexity calculation based on specific criteria."""
-    return len(set(text)) / len(text) if len(text) > 0 else 0.0
+    return len(set(data)) / len(data) if len(data) > 0 else 0.0
 
 # Example usage
 def main():
@@ -154,8 +161,9 @@ def main():
         format='%(asctime)s - %(levelname)s: %(message)s'
     )
 
-    # Example input text (you can replace this with any text you want to analyze)
-    input_text = "This is an example sentence to analyze the complexity of the text."
+    # Example input data (you can replace this with any data you want to analyze)
+    X = np.array([[1, 2], [3, 4]])
+    y = np.array([0, 1])
 
     # Initialize the complexity factor with an optional custom function.
     complexity_analyzer = AdvancedComplexityFactor(
@@ -163,7 +171,7 @@ def main():
     )
 
     # Calculate the data complexity level.
-    complexity = complexity_analyzer.calculate(input_text)
+    complexity = complexity_analyzer.calculate(X, y)
     
     print(f"Data Complexity Exact Value: {complexity}")
 
