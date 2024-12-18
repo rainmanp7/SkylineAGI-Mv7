@@ -1,309 +1,247 @@
-import numpy as np
-import json
+import sqlite3
 import os
+import json
+from datetime import datetime
+from typing import List, Any, Optional
 import logging
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from agi_config import AGIConfiguration
+from complexity import ComplexityRange
+from complexity import ComplexityMetrics
 
-class SimpleNN(nn.Module):
-    def __init__(self, input_size):
-        super(SimpleNN, self).__init__()
-        self.fc1 = nn.Linear(input_size, 64)
-        self.fc2 = nn.Linear(64, 128)
-        self.fc3 = nn.Linear(128, 1)
+# Setting up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))
-        return x
+class DatabaseManager:
+    def __init__(self, config_path: str = 'config.json'):
+        """
+        Initializes the DatabaseManager with the configuration file path.
+
+        :param config_path: Path to the configuration file (default: 'config.json').
+        """
+        self.config = AGIConfiguration(config_path)
+        self.database_path = self.config.get_database_path()
+        logging.info(f"Database Path: {self.database_path}")  # Debug log
+        self.connection = self.connect_to_database()
+
+    def connect_to_database(self) -> Optional[sqlite3.Connection]:
+        """
+        Connects to the SQLite database and returns the connection object.
+
+        :return: SQLite connection object or None if connection fails.
+        """
+        if not os.path.isfile(self.database_path):
+            logging.error(f"Error: Database file not found - {self.database_path}")
+            return None
+        try:
+            connection = sqlite3.connect(self.database_path)
+            logging.info("Successfully connected to the database.")
+            return connection
+        except sqlite3.Error as e:
+            logging.error(f"Error connecting to database: {e}")
+            return None
+
+    def execute_query(self, query: str, params: tuple = ()) -> Optional[List[tuple]]:
+        """
+        Executes a query against the database and optionally fetches results.
+
+        :param query: The SQL query to execute.
+        :param params: Parameters to substitute into the query (default: empty tuple).
+        :return: List of results for SELECT queries, or None for others.
+        """
+        if self.connection is None:
+            logging.error("Database connection is not initialized.")
+            return None
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(query, params)
+            if query.strip().lower().startswith("select"):
+                results = cursor.fetchall()
+                logging.debug(f"Query Results: {results}")
+                return results
+            else:
+                self.connection.commit()
+                logging.info("Query executed successfully.")
+                return None
+        except sqlite3.Error as e:
+            logging.error(f"Error executing query: {e}")
+            return None
+
+    def get_table_names(self) -> List[str]:
+        """
+        Retrieves a list of table names from the SQLite database.
+
+        :return: List of table names.
+        """
+        query = "SELECT name FROM sqlite_master WHERE type='table';"
+        result = self.execute_query(query)
+        return [table[0] for table in result] if result else []
+
+    def load_domain_dataset(self, table_name: str) -> List[tuple]:
+        """
+        Loads a dataset from the specified table in the SQLite database.
+
+        :param table_name: The name of the table to load data from.
+        :return: List of tuples containing the dataset rows.
+        """
+        query = f"SELECT * FROM {table_name};"
+        return self.execute_query(query) or []
+
+    def update_domain_data(self, table_name: str, data: tuple):
+        """
+        Inserts a new row into the specified table in the SQLite database, excluding the 'id' column.
+
+        :param table_name: The name of the table to insert data into.
+        :param data: Tuple of data to insert, excluding the 'id' column.
+        """
+        if self.connection is None:
+            logging.error("Database connection is not initialized.")
+            return
+        try:
+            cursor = self.connection.cursor()
+            # Retrieve column names for the table, excluding the 'id' column
+            cursor.execute(f"PRAGMA table_info({table_name});")
+            columns = [column[1] for column in cursor.fetchall() if column[1] != 'id']
+
+            # Ensure the data tuple matches the number of columns (excluding 'id')
+            if len(data) != len(columns):
+                logging.error(f"Data tuple length mismatch for table {table_name}. Expected {len(columns)} columns, got {len(data)}.")
+                return
+
+            # Create placeholders and construct the query
+            placeholders = ', '.join(['?'] * len(data))
+            column_list = ', '.join(columns)
+            query = f"INSERT INTO {table_name} ({column_list}) VALUES ({placeholders});"
+            cursor.execute(query, data)
+            self.connection.commit()
+            logging.info(f"Data inserted into table {table_name}.")
+        except sqlite3.Error as e:
+            logging.error(f"Error inserting data into table {table_name}: {e}")
+
+    def get_recent_updates(self) -> List[tuple]:
+        """
+        Retrieves recent updates from all tables in the SQLite database.
+
+        :return: List of tuples containing table names and their most recent row.
+        """
+        recent_updates = []
+        table_names = self.get_table_names()
+        for table_name in table_names:
+            if table_name == 'sqlite_sequence':  # Skip internal SQLite table
+                continue
+            # Check if the table has an 'id' column
+            cursor = self.connection.cursor()
+            cursor.execute(f"PRAGMA table_info({table_name});")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'id' in columns:
+                query = f"SELECT * FROM {table_name} ORDER BY id DESC LIMIT 1;"
+            else:
+                query = f"SELECT * FROM {table_name} LIMIT 1;"
+            recent_row = self.execute_query(query)
+            if recent_row:
+                recent_updates.append((table_name, recent_row[0]))
+        return recent_updates
+
+    def close_connection(self):
+        """
+        Closes the database connection.
+        """
+        if self.connection:
+            self.connection.close()
+            logging.info("Database connection closed.")
+
 
 class CrossDomainGeneralization:
-    """
-    A class for cross-domain generalization, enabling knowledge transfer between domains.
-    
-    Attributes:
-    - knowledge_base: The knowledge base instance.
-    - model: The model instance.
-    - domain_dataset_config: The path to the domain dataset configuration file.
-    - domain_datasets: A dictionary of domain datasets.
-    """
+    def __init__(self, db_manager: DatabaseManager):
+        if db_manager.connection is None:
+            logging.error("Database connection is not initialized for CrossDomainGeneralization.")
+            raise ValueError("Database connection is not initialized.")
+        self.db = db_manager
 
-    def __init__(self, knowledge_base, model, domain_dataset_config='domain_dataset.json'):
+    def fetch_knowledge(self, domain: str = None, complexity_range: str = None) -> Optional[List[tuple]]:
         """
-        Initialize the CrossDomainGeneralization class.
-        
-        Args:
-        - knowledge_base: The knowledge base instance.
-        - model: The model instance.
-        - domain_dataset_config: The path to the domain dataset configuration file.
+        Retrieve knowledge entries based on domain and complexity range.
+
+        :param domain: Domain to filter by (default: None, meaning no filter).
+        :param complexity_range: Complexity range to filter by (default: None, meaning no filter).
+        :return: List of knowledge entries or None if the query fails.
         """
-        self.knowledge_base = knowledge_base
-        self.model = model
-        self.domain_dataset_config = domain_dataset_config
-        self.domain_datasets = self.load_domain_datasets()
+        query = "SELECT * FROM knowledge_base WHERE 1=1"
+        params = []
+        if domain:
+            query += " AND category = ?"
+            params.append(domain)
+        if complexity_range:
+            query += " AND complexity_range = ?"
+            params.append(complexity_range)
 
-    def load_domain_datasets(self):
+        return self.db.execute_query(query, tuple(params))
+
+    def classify_complexity(self, score: float) -> str:
+        """Classify a complexity score into its range."""
+        return ComplexityRange.normalize_to_range(score)
+
+    def assimilate_data(self, category: str, key: str, value: str, complexity_score: float, metadata: dict = None):
         """
-        Load domain datasets from the configuration file.
-        
-        Returns:
-        - A dictionary of domain datasets.
+        Add or update knowledge in the database.
+
+        :param category: Category of the knowledge.
+        :param key: Key of the knowledge.
+        :param value: Value of the knowledge.
+        :param complexity_score: Complexity score of the knowledge.
+        :param metadata: Additional metadata (default: None).
         """
-        try:
-            with open(self.domain_dataset_config, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            logging.error(f"Error loading domain dataset configuration: {str(e)}")
-            return {}
+        complexity_range = self.classify_complexity(complexity_score)
+        metadata_json = json.dumps(metadata) if metadata else None
+        query = """
+            INSERT INTO knowledge_base (category, key, value, complexity_score, metadata, complexity_range, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+        params = (category, key, value, complexity_score, metadata_json, complexity_range, datetime.now())
+        self.db.execute_query(query, params)
 
-    def load_and_preprocess_data(self, domain, level):
+    def cross_domain_reasoning(self, query_key: str, target_domain: str) -> List[str]:
         """
-        Load and preprocess data from the given domain and level.
-        
-        Args:
-        - domain: The domain name.
-        - level: The level name.
-        
-        Returns:
-        - Preprocessed data (features and labels).
+        Analyze a query from one domain and apply knowledge to another.
+
+        :param query_key: Key to query in the source domain.
+        :param target_domain: Target domain to apply the knowledge to.
+        :return: List of reasoning results.
         """
-        try:
-            domain_dataset = self.domain_datasets.get(domain)
-            if domain_dataset:
-                datasets = domain_dataset.get('datasets')
-                if datasets:
-                    file_path = datasets.get(level)
-                    if file_path:
-                        # Resolve the full path relative to the script's execution directory
-                        script_dir = os.path.dirname(__file__)
-                        full_path = os.path.join(script_dir, file_path)
-                        logging.info(f"Expected file path: {full_path}")
+        source_data = self.db.execute_query("SELECT * FROM knowledge_base WHERE key = ?", (query_key,))
+        if not source_data:
+            logging.warning(f"No data found for key: {query_key}")
+            return []
 
-                        if os.path.isfile(full_path):
-                            logging.info(f"File found: {full_path}")
-                            # Load the data using numpy
-                            data = np.loadtxt(full_path, delimiter=',', skiprows=1, dtype=str)
-                            headers = data[0]
-                            feature_data = data[1:, :]
-                            target_column = 'Compx'
-                            
-                            # Log the headers for debugging
-                            logging.info(f"Headers found in the file: {headers}")
-                            
-                            # Identify feature columns
-                            features = []
-                            target_index = -1
-                            for i, header in enumerate(headers):
-                                if header not in ['Domain', 'Compx', 'Range', 'Range_Start', 'Range_End', 'info', 'CIter']:
-                                    features.append(i)
-                                if header == target_column:
-                                    target_index = i
-                            
-                            if target_index == -1:
-                                logging.error(f"Target column '{target_column}' not found for domain '{domain}' and level '{level}'.")
-                                return None, None, None, None
-
-                            # Convert feature data to numeric, ignoring errors
-                            feature_data_numeric = []
-                            labels = []
-                            for row in feature_data:
-                                try:
-                                    numeric_row = [float(row[i]) for i in features]
-                                    label = float(row[target_index])
-                                    feature_data_numeric.append(numeric_row)
-                                    labels.append(label)
-                                except ValueError:
-                                    logging.warning(f"Skipping row with non-numeric data: {row}")
-
-                            if not feature_data_numeric or not labels:
-                                logging.error(f"No valid numeric data found for domain '{domain}' and level '{level}'.")
-                                return None, None, None, None
-
-                            feature_data_numeric = np.array(feature_data_numeric)
-                            labels = np.array(labels)
-
-                            scaler = StandardScaler()
-                            features_scaled = scaler.fit_transform(feature_data_numeric)
-
-                            X_train, X_val, y_train, y_val = train_test_split(features_scaled, labels, test_size=0.2, random_state=42)
-
-                            # Convert to PyTorch tensors
-                            X_train = torch.tensor(X_train, dtype=torch.float32)
-                            y_train = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
-                            X_val = torch.tensor(X_val, dtype=torch.float32)
-                            y_val = torch.tensor(y_val, dtype=torch.float32).view(-1, 1)
-
-                            return X_train, y_train, X_val, y_val
-
-                        else:
-                            logging.error(f"File not found for domain '{domain}' and level '{level}': {full_path}")
-                            return None, None, None, None
-
-                    else:
-                        logging.error(f"No file path found for domain '{domain}' and level '{level}'.")
-                        return None, None, None, None
-
-                else:
-                    logging.error(f"No datasets found for domain '{domain}'.")
-                    return None, None, None, None
-
-            else:
-                logging.error(f"No dataset found for domain '{domain}'.")
-                return None, None, None, None
-
-        except Exception as e:
-            logging.error(f"Error loading data for domain '{domain}' and level '{level}': {str(e)}")
-            return None, None, None, None
-
-    def transfer_knowledge(self, source_domain, target_domain):
-        """
-        Transfer knowledge from the source domain to the target domain.
-        
-        Args:
-        - source_domain: The source domain name.
-        - target_domain: The target domain name.
-        """
-        source_knowledge = self.knowledge_base.query(source_domain)
-
-        if not source_knowledge:
-            logging.error(f"No knowledge found for source domain '{source_domain}'.")
-            return
-
-        # Placeholder for knowledge transfer logic
-        logging.info(f"Knowledge transferred from {source_domain} to {target_domain}.")
-
-    def fine_tune_model(self, domain, level):
-        """
-        Fine-tune the model for the given domain and level.
-        
-        Args:
-        - domain: The domain name.
-        - level: The level name.
-        """
-        X_train, y_train, X_val, y_val = self.load_and_preprocess_data(domain, level)
-
-        if X_train is None:
-            logging.error("Training data could not be loaded. Fine-tuning aborted.")
-            return
-
-        input_size = X_train.shape[1]
-        self.model = SimpleNN(input_size)  # Reinitialize the model with the correct input size
-
-        criterion = nn.MSELoss()  # Use MSE for regression since 'Compx' is numeric
-        optimizer = optim.Adam(self.model.parameters(), lr=0.001)
-
-        for epoch in range(10):
-            optimizer.zero_grad()
-            outputs = self.model(X_train)
-            loss = criterion(outputs, y_train)
-            loss.backward()
-            optimizer.step()
-
-        with torch.no_grad():
-            predictions = self.model(X_val)
-            predictions_classes = (predictions > 0.5).float()
-
-        # Since 'Compx' is numeric, we can't use accuracy, precision, recall, f1_score directly
-        # Instead, we can use metrics like Mean Squared Error (MSE) or Mean Absolute Error (MAE)
-        mse = criterion(predictions, y_val).item()
-        
-        logging.info(f"Model fine-tuned on '{domain}' level '{level}' with MSE: {mse:.2f}")
-
-    def evaluate_cross_domain_performance(self, domains_levels):
-        """
-        Evaluate the model's performance across multiple domains and levels.
-        
-        Args:
-        - domains_levels: A list of tuples (domain, level).
-        
-        Returns:
-        - A dictionary with performance metrics for each domain and level.
-        """
-        results = {}
-        
-        for domain, level in domains_levels:
-            result = self.evaluate_domain(domain, level)
-            if domain not in results:
-                results[domain] = {}
-            results[domain][level] = result
-        
+        results = []
+        for item in source_data:
+            # Hypothetical logic to transfer insights
+            results.append(f"Transferring {item[1]} to {target_domain}")
         return results
 
-    def evaluate_domain(self, domain, level):
-        """
-        Evaluate the model's performance on a single domain and level.
-        
-        Args:
-        - domain: The domain name.
-        - level: The level name.
-        
-        Returns:
-        - A dictionary with performance metrics.
-        """
-        X_train, y_train, X_val, y_val = self.load_and_preprocess_data(domain, level)
-        
-        if X_train is not None:
-            input_size = X_train.shape[1]
-            model = SimpleNN(input_size)  # Reinitialize the model with the correct input size
 
-            criterion = nn.MSELoss()  # Use MSE for regression since 'Compx' is numeric
-            optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-            for epoch in range(10):
-                optimizer.zero_grad()
-                outputs = model(X_train)
-                loss = criterion(outputs, y_train)
-                loss.backward()
-                optimizer.step()
-
-            with torch.no_grad():
-                predictions = model(X_val)
-                predictions_classes = (predictions > 0.5).float()
-
-            # Since 'Compx' is numeric, we can't use accuracy, precision, recall, f1_score directly
-            # Instead, we can use metrics like Mean Squared Error (MSE) or Mean Absolute Error (MAE)
-            mse = criterion(predictions, y_val).item()
-
-            return {
-                'mse': mse,
-            }
-        
-        return None
-
+# Example Usage
 if __name__ == "__main__":
-    # Configure logging to write to a file
-    log_file = 'cross_domain_generalization.log'
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s: %(message)s",
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+    db_manager = DatabaseManager()
+    if db_manager.connection is None:
+        logging.error("Failed to initialize database connection. Exiting.")
+        exit(1)
+
+    generalizer = CrossDomainGeneralization(db_manager)
+
+    # Test fetching knowledge
+    print("Knowledge fetched:", generalizer.fetch_knowledge(domain="science"))
+
+    # Assimilate new data
+    generalizer.assimilate_data(
+        category="finance",
+        key="economic_cycles",
+        value="Economic cycles affect global trade patterns.",
+        complexity_score=2300,
+        metadata={"source": "Economic Journal", "tags": ["economics", "trade"]}
     )
 
-    # Get the number of available CPUs
-    cpu_count = os.cpu_count()
-    logging.info(f"Available CPU count: {cpu_count}")
+    # Test cross-domain reasoning
+    print("Reasoning result:", generalizer.cross_domain_reasoning("economic_cycles", "science"))
 
-    # Initialize the model
-    # The input size will be dynamically determined in fine_tune_model and evaluate_domain
-    model = SimpleNN(input_size=1)  # Initial input size, will be updated
-
-    # Initialize the CrossDomainGeneralization class
-    cdg = CrossDomainGeneralization(None, model, domain_dataset_config='domain_dataset.json')
-
-    # Simulate performance data for multiple domains and levels
-    domains_levels = [('Math', 'level_1'), ('Math', 'level_2'), ('Science', 'level_1')]
-
-    # Evaluate cross-domain performance
-    results = cdg.evaluate_cross_domain_performance(domains_levels)
-    logging.info(f"Cross-domain performance results: {results}")
-
-    # Display the number of CPUs used
-    logging.info(f"Used CPU count: {cpu_count}")
+    # Close the connection
+    db_manager.close_connection()
