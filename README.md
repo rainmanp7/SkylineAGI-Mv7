@@ -39,12 +39,12 @@ The following files have been tested, validated, and confirmed to be error-free:
 - `agi_config.py`  
 - `metacognitive_manager.py`
 - `cross_domain_generalization.py`
+- `cross_domain_evaluation.py`
 
 ### Unvalidated Changing Files  
 The following files are under active development and testing:  
 
 - `[assimilation_memory_module].py`
-- `[cross_domain_evaluation].py`
 - `[main].py`
 
 > *Note: Unvalidated files may contain errors, warnings, or incomplete implementations. These will be updated progressively.*  
