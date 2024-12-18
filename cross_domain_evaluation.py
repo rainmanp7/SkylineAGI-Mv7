@@ -1,113 +1,130 @@
-
-# cross_domain_evaluation.py
+import sqlite3
+import os
+import json
 import logging
-from bayes_opt import BayesianOptimization
-from DomainKnowledgeBase import DomainKnowledgeBase  # Import the DomainKnowledgeBase class
+from typing import List, Optional
+from datetime import datetime
+from agi_config import AGIConfiguration
+from complexity import ComplexityRange
+from database_manager import DatabaseManager
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+class CrossDomainGeneralization:
+    def __init__(self, db_manager: DatabaseManager):
+        self.db_manager = db_manager
+
+    def fetch_knowledge(self, domain: str) -> List[dict]:
+        """
+        Fetch knowledge entries for a specific category from the knowledge_base table.
+        :param domain: The category to fetch knowledge for.
+        :return: List of dictionaries representing the knowledge.
+        """
+        query = "SELECT id, key, value FROM knowledge_base WHERE category = ?"
+        results = self.db_manager.execute_query(query, (domain,))
+        if not results:
+            logging.warning(f"No data found for category: {domain}")
+            return []
+
+        # Convert tuples to dictionaries
+        knowledge_entries = [{"id": row[0], "key": row[1], "value": row[2]} for row in results]
+        return knowledge_entries
+
+    def cross_domain_reasoning(self, query_key: str, target_domain: str) -> List[str]:
+        """
+        Perform reasoning to transfer knowledge from one domain to another.
+        :param query_key: The key of the knowledge entry.
+        :param target_domain: The target domain for knowledge transfer.
+        :return: List of transfer results.
+        """
+        # Here you can implement actual reasoning logic
+        # For instance, you could look up relevant transformations, mappings, or domain-specific adjustments
+        # This is a placeholder for actual reasoning logic; replace with your implementation
+        # You might want to retrieve some contextual information from the database or perform some logic
+        results = []
+
+        # Example logic: simple transformation based on keywords
+        if target_domain == "finance":
+            if "definition_of_agi" in query_key:
+                results.append(f"Applying AGI principles to finance.")
+            elif "quantum_computing" in query_key:
+                results.append(f"Exploring quantum computing applications in finance.")
+            else:
+                results.append(f"General knowledge transfer of {query_key} to finance.")
+
+        return results
 
 class CrossDomainEvaluation:
-    def __init__(self, domain_knowledge_base_path='knowledge_base/domain_dataset.json'):
+    def __init__(self, db_manager: DatabaseManager, generalizer: CrossDomainGeneralization):
         """
-        Initialize the CrossDomainEvaluation class.
+        Initializes CrossDomainEvaluation with the database manager and generalization object.
 
-        Args:
-            domain_knowledge_base_path (str, optional): The path to the domain dataset configuration file. Defaults to 'knowledge_base/domain_dataset.json'.
+        :param db_manager: DatabaseManager instance.
+        :param generalizer: CrossDomainGeneralization instance.
         """
-        self.domain_knowledge_base = DomainKnowledgeBase(dataset_config_path=domain_knowledge_base_path)
-        self.logger = logging.getLogger(__name__)
+        if db_manager.connection is None:
+            logging.error("Database connection is not initialized for evaluation.")
+            raise ValueError("Database connection is not initialized.")
+        self.db_manager = db_manager
+        self.generalizer = generalizer
 
-    def evaluate_cross_domain_performance(self, model, domains):
+    def evaluate_transferability(self, source_domain: str, target_domain: str) -> dict:
         """
-        Evaluate the model's performance across multiple domains.
+        Evaluate the transferability of knowledge between domains.
 
-        Args:
-            model: The model to evaluate.
-            domains (list): A list of domain names to evaluate the model on.
-
-        Returns:
-            float: The average performance of the model across all domains.
+        :param source_domain: Domain to retrieve knowledge from.
+        :param target_domain: Domain to transfer knowledge to.
+        :return: Dictionary with evaluation summary.
         """
-        overall_performance = 0
-        num_domains = len(domains)
+        logging.info(f"Starting transferability evaluation: {source_domain} -> {target_domain}")
 
-        for domain in domains:
-            # Load and preprocess data for the specific domain using the DomainKnowledgeBase
-            data = self.domain_knowledge_base.get_domain_knowledge(domain)
-            if data:
-                X_train, y_train, X_val, y_val = data
-                # Evaluate the model on the validation set
-                domain_performance = model.evaluate(X_val, y_val)
-                overall_performance += domain_performance
-                self.logger.info(f"Performance on {domain}: {domain_performance:.4f}")
-            else:
-                self.logger.warning(f"Data for domain '{domain}' could not be loaded.")
+        # Fetch knowledge from the source domain
+        source_knowledge = self.generalizer.fetch_knowledge(domain=source_domain)
+        if not source_knowledge:
+            logging.warning(f"No knowledge found for source domain: {source_domain}")
+            return {"status": "failure", "reason": f"No data found for domain '{source_domain}'"}
 
-        return overall_performance / num_domains if num_domains > 0 else 0
+        reasoning_results = []
+        successful_transfers = 0
 
-    def monitor_generalization_capabilities(self, model, domains):
-        """
-        Continuously monitor the model's cross-domain generalization.
+        for entry in source_knowledge:
+            key = entry.get("key", None)  # Ensure the entry contains the "key" field
+            if not key:
+                logging.warning(f"Invalid entry format or missing key: {entry}")
+                continue
 
-        Args:
-            model: The model to monitor.
-            domains (list): A list of domain names to evaluate the model on.
-        """
-        previous_cross_domain_performance = self.domain_knowledge_base.get_domain_knowledge("cross_domain_performance", 0)
-        
-        current_cross_domain_performance = self.evaluate_cross_domain_performance(model, domains)
-        
-        # Update DomainKnowledgeBase with current performance
-        self.domain_knowledge_base.update_domain_knowledge("cross_domain_performance", current_cross_domain_performance)
+            transfer_results = self.generalizer.cross_domain_reasoning(query_key=key, target_domain=target_domain)
+            reasoning_results.extend(transfer_results)
 
-        # Evaluate and report on the model's generalization capabilities
-        if current_cross_domain_performance > previous_cross_domain_performance:
-            self.logger.info("Model's cross-domain generalization capabilities have improved.")
-        else:
-            self.logger.info("Model's cross-domain generalization capabilities have not improved.")
+            # Count successful transfers based on custom logic
+            successful_transfers += len(transfer_results)
 
-    def optimize_hyperparameters(self, model, domain, optimization_metric='accuracy'):
-        """
-        Optimize hyperparameters using Bayesian Optimization for a specific domain.
-
-        Args:
-            model: The model to optimize.
-            domain (str): The domain to optimize for.
-            optimization_metric (str, optional): The metric to optimize. Defaults to 'accuracy'.
-        """
-        # Load and preprocess data for the specific domain using the DomainKnowledgeBase
-        data = self.domain_knowledge_base.get_domain_knowledge(domain)
-        if data:
-            X_train, y_train, X_val, y_val = data
-        else:
-            self.logger.warning(f"Data for domain '{domain}' could not be loaded.")
-            return
-
-        def black_box_function(**kwargs):
-            """Function to evaluate the model with given hyperparameters."""
-            model.set_params(**kwargs)
-            model.fit(X_train, y_train)
-            if optimization_metric == 'accuracy':
-                return model.score(X_val, y_val)  # Return accuracy
-            else:
-                # Implement other metrics as needed (e.g., F1-score, AUC-ROC, etc.)
-                self.logger.warning("Unsupported optimization metric. Defaulting to accuracy.")
-                return model.score(X_val, y_val)
-
-        # Define the hyperparameter bounds
-        pbounds = {
-            'n_estimators': (10, 100),
-            'ax_depth': (1, 20),
+        evaluation_summary = {
+            "source_domain": source_domain,
+            "target_domain": target_domain,
+            "total_knowledge_entries": len(source_knowledge),
+            "successful_transfers": successful_transfers,
+            "details": reasoning_results,
         }
 
-        optimizer = BayesianOptimization(
-            f=black_box_function,
-            pbounds=pbounds,
-            random_state=1,
-        )
+        logging.info(f"Evaluation Summary: {json.dumps(evaluation_summary, indent=4)}")
+        return evaluation_summary
 
-        optimizer.maximize(init_points=2, n_iter=3)
+# Example Usage
+if __name__ == "__main__":
+    # Initialize database and generalization components
+    db_manager = DatabaseManager()
+    if db_manager.connection is None:
+        logging.error("Failed to initialize database connection. Exiting.")
+        exit(1)
 
-        self.logger.info("Best parameters found: {}".format(optimizer.max))
+    generalizer = CrossDomainGeneralization(db_manager)
+    evaluator = CrossDomainEvaluation(db_manager, generalizer)
 
-# Usage example (to be called in your training pipeline)
-# evaluator = CrossDomainEvaluation()
-# evaluator.optimize_hyperparameters(model, 'domain_name')
+    # Perform cross-domain evaluation
+    evaluation_result = evaluator.evaluate_transferability("science", "finance")
+    print("Evaluation Result:", json.dumps(evaluation_result, indent=4))
+
+    # Close the database connection
+    db_manager.close_connection()
