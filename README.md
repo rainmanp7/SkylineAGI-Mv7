@@ -38,7 +38,7 @@ The following files have been tested, validated, and confirmed to be error-free:
 - `config.json`  
 - `agi_config.py`  
 - `metacognitive_manager.py`
-- `[cross_domain_generalization].py`
+- `cross_domain_generalization.py`
 
 ### Unvalidated Changing Files  
 The following files are under active development and testing:  
