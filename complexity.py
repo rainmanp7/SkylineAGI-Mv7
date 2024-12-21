@@ -1,5 +1,6 @@
 # complexity.py
 # Updated Dec 14, 2024
+# Updated Dec 22
 
 from enum import Enum
 from typing import Any, Callable, List
@@ -7,6 +8,7 @@ import numpy as np
 import scipy.stats as stats
 import logging
 import json
+from multiprocessing import Pool
 
 class ComplexityRange(Enum):
     """Detailed complexity ranges for nuanced classification"""
@@ -90,19 +92,32 @@ class AdvancedComplexityFactor:
         self.custom_complexity_func = custom_complexity_func
         self.metrics_log = []
 
+    @staticmethod
+    def calculate_metrics(data: np.ndarray) -> dict:
+        """Calculate metrics for a single dataset."""
+        return {
+            'entropy': ComplexityMetrics.calculate_entropy(data),
+            'variance': ComplexityMetrics.calculate_variance_complexity(data),
+        }
+
     def calculate(self, X: np.ndarray, y: np.ndarray) -> int:
-        """Comprehensive complexity calculation."""
+        """Comprehensive complexity calculation using multiprocessing."""
         try:
             # Flatten the data for entropy and variance calculations
             X_flat = X.flatten()
             y_flat = y.flatten()
 
-            # Calculate multiple complexity metrics from the data
+            # Use multiprocessing to calculate metrics for X and y in parallel
+            with Pool(processes=2) as pool:
+                results = pool.map(self.calculate_metrics, [X_flat, y_flat])
+
+            # Extract results
+            metrics_X, metrics_y = results
             metrics = {
-                'entropy_X': ComplexityMetrics.calculate_entropy(X_flat),
-                'entropy_y': ComplexityMetrics.calculate_entropy(y_flat),
-                'variance_X': ComplexityMetrics.calculate_variance_complexity(X_flat),
-                'variance_y': ComplexityMetrics.calculate_variance_complexity(y_flat),
+                'entropy_X': metrics_X['entropy'],
+                'entropy_y': metrics_y['entropy'],
+                'variance_X': metrics_X['variance'],
+                'variance_y': metrics_y['variance'],
             }
 
             # Custom complexity function if provided
