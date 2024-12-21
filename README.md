@@ -42,11 +42,12 @@ The following files have been tested, validated, and confirmed to be error-free:
 - `cross_domain_evaluation.py`
 - `optimization.py removed! model self optimize now`
 - `model.py -self optimization of hyper parameters`
+- `assimilation_memory_module.py -removed`
 
 ### Unvalidated Changing Files  
 The following files are under active development and testing:  
 
-- `[assimilation_memory_module].py`
+- `[assimilation].py`
 - `[main].py`
 
 > *Note: Unvalidated files may contain errors, warnings, or incomplete implementations. These will be updated progressively.*  
