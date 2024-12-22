@@ -1,4 +1,5 @@
 # logging_config.py start 
+# Updated Dec 22
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -11,15 +12,23 @@ async_ops_completed = Event()
 def setup_logging(log_level=logging.INFO):
     """Set up logging configuration."""
     log_file = "app.log"
-    log_dir = os.path.dirname(log_file) if os.path.dirname(log_file) else os.getcwd()
+    log_dir = os.path.join(os.getcwd(), "logs")  # Use a subdirectory 'logs' in the current working directory
 
     # Check if log directory is writable
-    if not os.access(log_dir, os.W_OK):
-        log_dir = os.path.expanduser("~/logs")
-        if not os.path.exists(log_dir):
+    if not os.path.exists(log_dir):
+        try:
             os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(log_dir, "app.log")
-        print(f"Falling back to log directory: {log_dir}")
+            print(f"Created log directory: {log_dir}")
+        except PermissionError:
+            print(f"No write access to create log directory: {log_dir}. Falling back to console logging.")
+            file_handler = logging.StreamHandler()
+            return
+        except Exception as e:
+            print(f"Unexpected error while creating log directory: {e}. Falling back to console logging.")
+            file_handler = logging.StreamHandler()
+            return
+
+    log_file = os.path.join(log_dir, log_file)
 
     # Get the root logger
     logger = logging.getLogger()
@@ -29,6 +38,7 @@ def setup_logging(log_level=logging.INFO):
         try:
             # Create a rotating file handler
             file_handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=5)  # 5 MB per file
+            print(f"Created file handler for log file: {log_file}")
         except PermissionError:
             print(f"No write access to log file: {log_file}. Falling back to console logging.")
             file_handler = logging.StreamHandler()
