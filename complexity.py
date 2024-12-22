@@ -6,9 +6,12 @@ from enum import Enum
 from typing import Any, Callable, List
 import numpy as np
 import scipy.stats as stats
-import logging
+from logging_config import setup_logging
 import json
 from multiprocessing import Pool
+
+# Initialize the logger
+logger = setup_logging()
 
 class ComplexityRange(Enum):
     """Detailed complexity ranges for nuanced classification"""
@@ -62,7 +65,7 @@ class ComplexityMetrics:
             entropy = -np.sum(probabilities * np.log2(probabilities + 1e-10))
             return entropy
         except Exception as e:
-            logging.error(f"Entropy calculation error: {e}")
+            logger.error(f"Entropy calculation error: {e}")
             return 0
 
     @staticmethod
@@ -81,7 +84,7 @@ class ComplexityMetrics:
             )
             return complexity_score
         except Exception as e:
-            logging.error(f"Variance complexity calculation error: {e}")
+            logger.error(f"Variance complexity calculation error: {e}")
             return 0
 
 class AdvancedComplexityFactor:
@@ -149,7 +152,7 @@ class AdvancedComplexityFactor:
             return exact_value
 
         except Exception as e:
-            logging.error(f"Comprehensive complexity calculation error: {e}")
+            logger.error(f"Comprehensive complexity calculation error: {e}")
             return ComplexityRange.EASY.value[0]  # Return default range's minimum value
 
     def export_complexity_log(self, filename: str = 'complexity_log.json'):
@@ -158,10 +161,10 @@ class AdvancedComplexityFactor:
             with open(filename, 'w') as f:
                 json.dump(self.metrics_log, f, indent=4)
                 
-            logging.info(f"Complexity log exported to {filename}")
+            logger.info(f"Complexity log exported to {filename}")
             
         except Exception as e:
-            logging.error(f"Complexity log export error: {e}")
+            logger.error(f"Complexity log export error: {e}")
 
 # Example custom complexity function (optional)
 def custom_text_complexity(data: np.ndarray) -> float:
@@ -170,12 +173,6 @@ def custom_text_complexity(data: np.ndarray) -> float:
 
 # Example usage
 def main():
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s: %(message)s'
-    )
-
     # Example input data (you can replace this with any data you want to analyze)
     X = np.array([[1, 2], [3, 4]])
     y = np.array([0, 1])
