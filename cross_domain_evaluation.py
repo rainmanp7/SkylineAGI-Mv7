@@ -1,3 +1,6 @@
+# cross_domain_evaluation.py
+# Updated Dec 22
+
 import sqlite3
 import os
 import json
@@ -7,9 +10,10 @@ from datetime import datetime
 from agi_config import AGIConfiguration
 from complexity import ComplexityRange
 from database_manager import DatabaseManager
+from logging_config import setup_logging
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = setup_logging(script_name="cross_domain_evaluation")
 
 class CrossDomainGeneralization:
     def __init__(self, db_manager: DatabaseManager):
@@ -24,7 +28,7 @@ class CrossDomainGeneralization:
         query = "SELECT id, key, value FROM knowledge_base WHERE category = ?"
         results = self.db_manager.execute_query(query, (domain,))
         if not results:
-            logging.warning(f"No data found for category: {domain}")
+            logger.warning(f"No data found for category: {domain}")
             return []
 
         # Convert tuples to dictionaries
@@ -64,7 +68,7 @@ class CrossDomainEvaluation:
         :param generalizer: CrossDomainGeneralization instance.
         """
         if db_manager.connection is None:
-            logging.error("Database connection is not initialized for evaluation.")
+            logger.error("Database connection is not initialized for evaluation.")
             raise ValueError("Database connection is not initialized.")
         self.db_manager = db_manager
         self.generalizer = generalizer
@@ -77,12 +81,12 @@ class CrossDomainEvaluation:
         :param target_domain: Domain to transfer knowledge to.
         :return: Dictionary with evaluation summary.
         """
-        logging.info(f"Starting transferability evaluation: {source_domain} -> {target_domain}")
+        logger.info(f"Starting transferability evaluation: {source_domain} -> {target_domain}")
 
         # Fetch knowledge from the source domain
         source_knowledge = self.generalizer.fetch_knowledge(domain=source_domain)
         if not source_knowledge:
-            logging.warning(f"No knowledge found for source domain: {source_domain}")
+            logger.warning(f"No knowledge found for source domain: {source_domain}")
             return {"status": "failure", "reason": f"No data found for domain '{source_domain}'"}
 
         reasoning_results = []
@@ -91,7 +95,7 @@ class CrossDomainEvaluation:
         for entry in source_knowledge:
             key = entry.get("key", None)  # Ensure the entry contains the "key" field
             if not key:
-                logging.warning(f"Invalid entry format or missing key: {entry}")
+                logger.warning(f"Invalid entry format or missing key: {entry}")
                 continue
 
             transfer_results = self.generalizer.cross_domain_reasoning(query_key=key, target_domain=target_domain)
@@ -108,7 +112,7 @@ class CrossDomainEvaluation:
             "details": reasoning_results,
         }
 
-        logging.info(f"Evaluation Summary: {json.dumps(evaluation_summary, indent=4)}")
+        logger.info(f"Evaluation Summary: {json.dumps(evaluation_summary, indent=4)}")
         return evaluation_summary
 
 # Example Usage
@@ -116,7 +120,7 @@ if __name__ == "__main__":
     # Initialize database and generalization components
     db_manager = DatabaseManager()
     if db_manager.connection is None:
-        logging.error("Failed to initialize database connection. Exiting.")
+        logger.error("Failed to initialize database connection. Exiting.")
         exit(1)
 
     generalizer = CrossDomainGeneralization(db_manager)
@@ -124,7 +128,7 @@ if __name__ == "__main__":
 
     # Perform cross-domain evaluation
     evaluation_result = evaluator.evaluate_transferability("science", "finance")
-    print("Evaluation Result:", json.dumps(evaluation_result, indent=4))
+    logger.info(f"Evaluation Result: {json.dumps(evaluation_result, indent=4)}")
 
     # Close the database connection
     db_manager.close_connection()
