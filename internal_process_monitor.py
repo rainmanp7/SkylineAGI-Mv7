@@ -1,10 +1,13 @@
-
 # internal_process_monitor.py
 import psutil
 import subprocess
 import time
 from collections import deque
 from typing import Dict, Optional
+from logging_config import setup_logging
+
+# Set up logging
+logger = setup_logging(script_name="internal_process_monitor")
 
 class InternalProcessMonitor:
     """
@@ -46,6 +49,7 @@ class InternalProcessMonitor:
                 "cpu_usage": [],
                 "memory_usage": []
             }
+        logger.info(f"Started monitoring task: {task_name}")
 
     def end_task_monitoring(self) -> None:
         """
@@ -53,6 +57,7 @@ class InternalProcessMonitor:
         """
         if self.current_task:
             self.task_metrics[self.current_task]["end_time"] = time.time()
+            logger.info(f"Ended monitoring task: {self.current_task}")
             self.current_task = None
 
     def _update_task_metrics(self, metric_name: str, value: float) -> None:
@@ -78,6 +83,7 @@ class InternalProcessMonitor:
         self.cpu_usage_history.append(current_cpu)
         self.timestamps.append(current_time)
         self._update_task_metrics("cpu_usage", current_cpu)
+        logger.debug(f"CPU Usage: {current_cpu}%")
 
     def _get_cpu_usage_fallback(self) -> float:
         """
@@ -88,6 +94,7 @@ class InternalProcessMonitor:
             load_avg = subprocess.check_output("uptime", shell=True).decode().split("load average:")[1].split(",")[0].strip()
             return float(load_avg) * 100 / psutil.cpu_count()
         except Exception:
+            logger.error("Failed to get CPU usage using subprocess. Returning 0.0.")
             return 0.0  # Return 0.0 if unable to fetch
 
     def monitor_memory_usage(self) -> None:
@@ -97,6 +104,7 @@ class InternalProcessMonitor:
         current_memory = psutil.virtual_memory().percent
         self.memory_usage_history.append(current_memory)
         self._update_task_metrics("memory_usage", current_memory)
+        logger.debug(f"Memory Usage: {current_memory}%")
 
     def monitor_task_queue_length(self, queue_size: int) -> None:
         """
@@ -105,6 +113,7 @@ class InternalProcessMonitor:
         :param queue_size: Current size of the task queue
         """
         self.task_queue_length_history.append(queue_size)
+        logger.debug(f"Task Queue Length: {queue_size}")
 
     def monitor_knowledge_base_updates(self, num_updates: int) -> None:
         """
@@ -113,6 +122,7 @@ class InternalProcessMonitor:
         :param num_updates: Number of updates
         """
         self.knowledge_base_updates_history.append(num_updates)
+        logger.debug(f"Knowledge Base Updates: {num_updates}")
 
     def monitor_model_training_time(self, training_time: float) -> None:
         """
@@ -121,6 +131,7 @@ class InternalProcessMonitor:
         :param training_time: Time taken for model training
         """
         self.model_training_time_history.append(training_time)
+        logger.debug(f"Model Training Time: {training_time}s")
 
     def monitor_model_inference_time(self, inference_time: float) -> None:
         """
@@ -129,6 +140,7 @@ class InternalProcessMonitor:
         :param inference_time: Time taken for model inference
         """
         self.model_inference_time_history.append(inference_time)
+        logger.debug(f"Model Inference Time: {inference_time}s")
 
     def get_historical_data(self) -> Dict:
         """
@@ -153,10 +165,11 @@ class InternalProcessMonitor:
         :return: Task report dictionary
         """
         if task_name not in self.task_metrics:
+            logger.warning(f"No data for task: {task_name}")
             return {"error": f"No data for task: {task_name}"}
 
         task_data = self.task_metrics[task_name]
-        return {
+        report = {
             "task_name": task_name,
             "duration": task_data["end_time"] - task_data["start_time"],
             "avg_cpu": self._calculate_average(task_data["cpu_usage"]),
@@ -164,6 +177,8 @@ class InternalProcessMonitor:
             "peak_cpu": max(task_data["cpu_usage"]) if task_data["cpu_usage"] else 0,
             "peak_memory": max(task_data["memory_usage"]) if task_data["memory_usage"] else 0
         }
+        logger.info(f"Generated task report for {task_name}: {report}")
+        return report
 
     @staticmethod
     def _calculate_average(values: list) -> float:
@@ -187,5 +202,11 @@ if __name__ == "__main__":
         time.sleep(0.1)  # Simulate work
     monitor.end_task_monitoring()
 
-    print(monitor.generate_task_report("Task 1"))
-    print(monitor.get_historical_data())
+    task_report = monitor.generate_task_report("Task 1")
+    logger.info(f"Task Report: {task_report}")
+    historical_data = monitor.get_historical_data()
+    logger.info(f"Historical Data: {historical_data}")
+
+    # Print statements for solo run
+    print(f"Task Report: {task_report}")
+    print(f"Historical Data: {historical_data}")
