@@ -1,4 +1,3 @@
-
 # cache_utils.py
 # updated to use optuna Dec 12 2024
 import functools
@@ -8,6 +7,10 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 from sklearn.metrics import mean_squared_error, r2_score
 import optuna
+from logging_config import setup_logging
+
+# Set up logging
+logger = setup_logging(script_name="cache_utils")
 
 # Caching utilities
 cache_conditions = {
@@ -30,7 +33,7 @@ def cached_bayesian_fit(func):
         hyperparameters_hash = compute_hash(kwargs.get("hyperparameters", {}))
 
         if input_hash in cache and cache_conditions['hyperparameters_hash'] == hyperparameters_hash:
-            print("Using cached results...")
+            logger.info("Using cached results...")
             return cache[input_hash]
 
         result = func(self, *args, **kwargs)
@@ -72,14 +75,14 @@ class BayesianHyperparameterTuning:
             study.optimize(self._objective, n_trials=1)  # Optimize one trial at a time
 
             current_best_value = study.best_value
-            print(f"Trial {trial + 1}/{n_trials}, Best Value: {current_best_value}")
+            logger.info(f"Trial {trial + 1}/{n_trials}, Best Value: {current_best_value}")
 
             # Check for improvement
             if current_best_value < best_value:
                 best_value = current_best_value  # Update the best value
-                print("Improvement found!")
+                logger.info("Improvement found!")
             else:
-                print("No improvement found, stopping optimization.")
+                logger.info("No improvement found, stopping optimization.")
                 break  # Stop if no improvement in this trial
 
         best_hyperparameters = study.best_params
@@ -110,10 +113,10 @@ if __name__ == "__main__":
     # Perform tuning with early stopping
     best_hyperparameters, best_score = tuner.tune_hyperparameters(n_trials=50)
     
-    print("Best Hyperparameters:", best_hyperparameters)
-    print("Best R^2 Score:", best_score)
+    logger.info(f"Best Hyperparameters: {best_hyperparameters}")
+    logger.info(f"Best R^2 Score: {best_score}")
 
     # Evaluate model with the best hyperparameters found
     evaluation_metrics = tuner.evaluate_best_model(best_hyperparameters)
     
-    print("Evaluation Metrics (MSE and R^2):", evaluation_metrics)
+    logger.info(f"Evaluation Metrics (MSE and R^2): {evaluation_metrics}")
