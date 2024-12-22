@@ -4,14 +4,18 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import sys
 from threading import Event  # For async_ops_completed simulation
 
 # Create a global event for asynchronous operation completion simulation
 async_ops_completed = Event()
 
-def setup_logging(log_level=logging.INFO):
+def setup_logging(log_level=logging.INFO, script_name=None):
     """Set up logging configuration."""
-    log_file = "app.log"
+    # Determine the script's filename without the .py extension
+    if script_name is None:
+        script_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+    log_file = f"{script_name}.log"
     log_dir = os.path.join(os.getcwd(), "logs")  # Use a subdirectory 'logs' in the current working directory
 
     # Check if log directory is writable
