@@ -1,17 +1,13 @@
-# async_process_manager.py
-# Updated Dec 14, 2024
-
 import asyncio
 from dataclasses import dataclass
-from typing import Dict, List, Any, Callable
+from typing import Dict, Callable, Any
 from concurrent.futures import ProcessPoolExecutor
-import resource
 import psutil
-import logging
 import os
+from logging_config import setup_logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = setup_logging()
 
 @dataclass
 class ProcessTask:
@@ -25,16 +21,16 @@ class ProcessTask:
 
 class InternalProcessMonitor:
     def on_task_submitted(self, task: ProcessTask) -> None:
-        logging.info(f"Task {task.name} submitted with priority {task.priority}")
+        logger.info(f"Task {task.name} submitted with priority {task.priority}")
 
     def on_task_completed(self, task: ProcessTask, result: Any) -> None:
-        logging.info(f"Task {task.name} completed with result {result}")
+        logger.info(f"Task {task.name} completed with result {result}")
 
     def on_task_failed(self, task: ProcessTask, error: Exception) -> None:
-        logging.error(f"Task {task.name} failed with error {error}")
+        logger.error(f"Task {task.name} failed with error {error}")
 
     def on_cleanup(self) -> None:
-        logging.info("Cleanup completed")
+        logger.info("Cleanup completed")
 
 class AsyncProcessManager:
     def __init__(self, max_workers: int = None, memory_limit: float = 0.8):
@@ -63,7 +59,7 @@ class AsyncProcessManager:
         except Exception as e:
             self.process_monitor.on_task_failed(task, e)
             task.current_retries += 1
-            logging.error(f"Task {task.name} failed (attempt {task.current_retries}): {str(e)}", exc_info=True)
+            logger.error(f"Task {task.name} failed (attempt {task.current_retries}): {str(e)}", exc_info=True)
             if task.current_retries >= task.max_retries:
                 raise
             await asyncio.sleep(1)
@@ -117,7 +113,7 @@ if __name__ == "__main__":
         results = await async_process_manager.run_tasks()
 
         # Log the results
-        logging.info(f"Results: {results}")
+        logger.info(f"Results: {results}")
 
         # Cleanup
         await async_process_manager.cleanup()
