@@ -1,0 +1,2 @@
+2024-12-22 21:06:24,782 - root - INFO - MultiHeadAttention Output Shape: torch.Size([4, 10, 128])
+2024-12-22 21:06:24,787 - root - INFO - ContextAwareAttention Output Shape: torch.Size([4, 128])
