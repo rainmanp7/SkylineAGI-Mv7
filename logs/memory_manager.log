@@ -1,0 +1,23 @@
+2024-12-22 21:18:31,438 - root - INFO - ### Running Memory Manager Test Suite ###
+2024-12-22 21:18:31,438 - root - INFO - MemoryManager initialized.
+2024-12-22 21:18:31,439 - root - INFO - 
+1. Storing in Working Memory:
+2024-12-22 21:18:31,439 - root - INFO - Storing 'Hello, World!' under key 'test_key' in Working Memory...
+2024-12-22 21:18:31,439 - root - INFO - Stored 'Hello, World!' under key 'test_key' in Working Memory.
+2024-12-22 21:18:31,439 - root - INFO - Working Memory After Store: {'test_key': 'Hello, World!'}
+2024-12-22 21:18:31,439 - root - INFO - 
+2. Storing in Short-Term Memory:
+2024-12-22 21:18:31,439 - root - INFO - Storing '12345' under key 'short_test' in Short-Term Memory...
+2024-12-22 21:18:31,440 - root - INFO - Stored '12345' under key 'short_test' in Short-Term Memory.
+2024-12-22 21:18:31,440 - root - INFO - Short-Term Memory After Store: {'short_test': 12345}
+2024-12-22 21:18:31,441 - root - INFO - 
+3. Memory Consolidation:
+2024-12-22 21:18:31,442 - root - INFO - Memory Consolidation Activated.
+2024-12-22 21:18:31,443 - root - INFO - Memories After Consolidation:
+ {'working_memory': {}, 'short_term_memory': {}, 'long_term_memory': {'test_key': 'Hello, World!', 'short_test': 12345}}
+2024-12-22 21:18:31,443 - root - INFO - 
+4. Retrieving from Long-Term Memory (after consolidation):
+2024-12-22 21:18:31,444 - root - INFO - Retrieving value for key 'test_key' from Long-Term Memory...
+2024-12-22 21:18:31,446 - root - INFO - Retrieved 'Hello, World!' under key 'test_key' from Long-Term Memory.
+2024-12-22 21:18:31,447 - root - INFO - 
+### Test Suite Completed ###
