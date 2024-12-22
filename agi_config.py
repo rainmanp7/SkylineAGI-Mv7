@@ -1,11 +1,13 @@
 # agi_config.py
+# updated Dec22 2024
 
 import json
-from typing import Dict, Any, Optional
 import logging
+from typing import Dict, Any, Optional
+from logging_config import setup_logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s")
+# Configure logging using setup_logging
+setup_logging()
 
 _config_executed = False  # Flag to prevent duplicate execution
 
