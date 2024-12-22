@@ -1,0 +1,4 @@
+2024-12-22 18:18:16,153 - root - INFO - Task SampleTask submitted with priority 1
+2024-12-22 18:18:16,183 - root - INFO - Task SampleTask completed with result 7
+2024-12-22 18:18:16,184 - root - INFO - Results: {'SampleTask': 7}
+2024-12-22 18:18:16,192 - root - INFO - Cleanup completed
