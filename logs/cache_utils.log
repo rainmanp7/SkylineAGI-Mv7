@@ -1,0 +1,11 @@
+2024-12-22 19:56:19,212 - root - INFO - Trial 1/50, Best Value: 0.9863378489273513
+2024-12-22 19:56:19,212 - root - INFO - Improvement found!
+2024-12-22 19:56:20,451 - root - INFO - Trial 2/50, Best Value: 0.9863378454078482
+2024-12-22 19:56:20,451 - root - INFO - Improvement found!
+2024-12-22 19:56:28,303 - root - INFO - Trial 3/50, Best Value: 0.9863378421637525
+2024-12-22 19:56:28,304 - root - INFO - Improvement found!
+2024-12-22 19:56:30,038 - root - INFO - Trial 4/50, Best Value: 0.9863378421637525
+2024-12-22 19:56:30,038 - root - INFO - No improvement found, stopping optimization.
+2024-12-22 19:56:30,038 - root - INFO - Best Hyperparameters: {'kernel_constant': 3.5940792024127854, 'kernel_length_scale': 9.836817444859317, 'n_restarts_optimizer': 95}
+2024-12-22 19:56:30,038 - root - INFO - Best R^2 Score: -0.9863378421637525
+2024-12-22 19:56:36,145 - root - INFO - Evaluation Metrics (MSE and R^2): {'MSE': 0.19859172432783684, 'R2': -0.9863378413464836}
