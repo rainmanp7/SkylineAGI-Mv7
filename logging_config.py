@@ -1,17 +1,13 @@
-# logging_config.py start 
+# logging_config.py
 # Updated Dec 22
 
 import logging
 from logging.handlers import RotatingFileHandler
 import os
 import sys
-from threading import Event  # For async_ops_completed simulation
-
-# Create a global event for asynchronous operation completion simulation
-async_ops_completed = Event()
 
 def setup_logging(log_level=logging.INFO, script_name=None):
-    """Set up logging configuration."""
+    """Set up logging configuration and return a logger."""
     # Determine the script's filename without the .py extension
     if script_name is None:
         script_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
@@ -25,12 +21,22 @@ def setup_logging(log_level=logging.INFO, script_name=None):
             print(f"Created log directory: {log_dir}")
         except PermissionError:
             print(f"No write access to create log directory: {log_dir}. Falling back to console logging.")
-            file_handler = logging.StreamHandler()
-            return
+            logger = logging.getLogger()
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(log_level)
+            return logger
         except Exception as e:
             print(f"Unexpected error while creating log directory: {e}. Falling back to console logging.")
-            file_handler = logging.StreamHandler()
-            return
+            logger = logging.getLogger()
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(log_level)
+            return logger
 
     log_file = os.path.join(log_dir, log_file)
 
@@ -51,7 +57,7 @@ def setup_logging(log_level=logging.INFO, script_name=None):
             file_handler = logging.StreamHandler()
 
         # Custom formatter with day, date, and time
-        formatter = logging.Formatter('%(message)s. %(asctime)s', datefmt='%a %b %d %H:%M:%S %Y')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
 
         # Configure console handler with the same formatter
@@ -63,15 +69,15 @@ def setup_logging(log_level=logging.INFO, script_name=None):
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
 
+    return logger
+
 def main():
     """Main function to run the application."""
     # Call the setup_logging function before logging any messages
-    setup_logging()
+    logger = setup_logging()
 
-    # Get the logger
-    logger = logging.getLogger(__name__)
-
-    logger.info("Application started.")  # Log application startup
+    # Log application startup
+    logger.info("Application started.")
 
     # Simulate an actual event
     logger.info("Event: Processing operation started.")
@@ -79,5 +85,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# end of logging config.
