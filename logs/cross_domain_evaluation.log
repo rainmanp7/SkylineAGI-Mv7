@@ -1,0 +1,80 @@
+2024-12-22 20:01:57,641 - root - INFO - Database Path: skyline_agi.db
+2024-12-22 20:01:57,644 - root - INFO - Successfully connected to the database.
+2024-12-22 20:01:57,645 - root - INFO - Starting transferability evaluation: science -> finance
+2024-12-22 20:01:57,648 - root - INFO - Evaluation Summary: {
+    "source_domain": "science",
+    "target_domain": "finance",
+    "total_knowledge_entries": 10,
+    "successful_transfers": 10,
+    "details": [
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "General knowledge transfer of new_topic to finance.",
+        "General knowledge transfer of new_topic to finance."
+    ]
+}
+2024-12-22 20:01:57,649 - root - INFO - Evaluation Result: {
+    "source_domain": "science",
+    "target_domain": "finance",
+    "total_knowledge_entries": 10,
+    "successful_transfers": 10,
+    "details": [
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "General knowledge transfer of new_topic to finance.",
+        "General knowledge transfer of new_topic to finance."
+    ]
+}
+2024-12-22 20:01:57,650 - root - INFO - Database connection closed.
+2024-12-22 20:55:41,195 - root - INFO - Database Path: skyline_agi.db
+2024-12-22 20:55:41,198 - root - INFO - Successfully connected to the database.
+2024-12-22 20:55:41,199 - root - INFO - Starting transferability evaluation: science -> finance
+2024-12-22 20:55:41,202 - root - INFO - Evaluation Summary: {
+    "source_domain": "science",
+    "target_domain": "finance",
+    "total_knowledge_entries": 10,
+    "successful_transfers": 10,
+    "details": [
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "General knowledge transfer of new_topic to finance.",
+        "General knowledge transfer of new_topic to finance."
+    ]
+}
+2024-12-22 20:55:41,203 - root - INFO - Evaluation Result: {
+    "source_domain": "science",
+    "target_domain": "finance",
+    "total_knowledge_entries": 10,
+    "successful_transfers": 10,
+    "details": [
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "Applying AGI principles to finance.",
+        "Exploring quantum computing applications in finance.",
+        "General knowledge transfer of new_topic to finance.",
+        "General knowledge transfer of new_topic to finance."
+    ]
+}
+2024-12-22 20:55:41,204 - root - INFO - Database connection closed.
