@@ -1,0 +1,12 @@
+{
+    "num_rounds": 5,
+    "model_config": {
+        "input_size": 128,
+        "num_heads": 8,
+        "dropout_rate": 0.1
+    },
+    "code_generation": {
+        "enabled": true,
+        "target_file": "generated_code/optimized_model.py"
+    }
+}
