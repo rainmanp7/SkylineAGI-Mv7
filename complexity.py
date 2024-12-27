@@ -1,6 +1,5 @@
 # complexity.py
-# Updated Dec 14, 2024
-# Updated Dec 22
+# Updated Dec 27, 2024
 
 from enum import Enum
 from typing import Any, Callable, List
@@ -103,9 +102,13 @@ class AdvancedComplexityFactor:
             'variance': ComplexityMetrics.calculate_variance_complexity(data),
         }
 
-    def calculate(self, X: np.ndarray, y: np.ndarray) -> int:
+    def calculate(self, X: Any, y: Any) -> int:
         """Comprehensive complexity calculation using multiprocessing."""
         try:
+            # Convert X and y to numpy arrays if they are not already
+            X = np.array(X)
+            y = np.array(y)
+
             # Flatten the data for entropy and variance calculations
             X_flat = X.flatten()
             y_flat = y.flatten()
@@ -174,8 +177,8 @@ def custom_text_complexity(data: np.ndarray) -> float:
 # Example usage
 def main():
     # Example input data (you can replace this with any data you want to analyze)
-    X = np.array([[1, 2], [3, 4]])
-    y = np.array([0, 1])
+    X = [[1, 2], [3, 4]]
+    y = [0, 1]
 
     # Initialize the complexity factor with an optional custom function.
     complexity_analyzer = AdvancedComplexityFactor(
