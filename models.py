@@ -1,3 +1,6 @@
+# models.py
+# Updated Dec 27, 2024
+
 import numpy as np
 from scipy.special import softmax as scipy_softmax
 from sklearn.datasets import load_digits
@@ -68,6 +71,24 @@ class SkylineAGI32:
         best_value = study.best_value
         return best_hyperparams, best_value
 
+def create_model(input_shape: int, output_shape: int) -> SkylineAGI32:
+    """
+    Create a new SkylineAGI32 model with random weights and biases.
+
+    Args:
+        input_shape (int): Number of input features.
+        output_shape (int): Number of output classes.
+
+    Returns:
+        SkylineAGI32: A new instance of the SkylineAGI32 model.
+    """
+    # Initialize random weights and biases
+    weights = np.random.randn(input_shape, output_shape)
+    biases = np.zeros(output_shape)
+
+    # Create and return the model
+    return SkylineAGI32(weights, biases)
+
 def main():
     np.random.seed(42)
     
@@ -83,9 +104,9 @@ def main():
     X_train, X_val, y_train, y_val = train_test_split(X, y_onehot, test_size=0.2, random_state=42)
 
     # Initialize the model
-    weights = np.random.randn(64, 10)  # Adjusted shape for digits dataset
-    biases = np.zeros(10)
-    skyline_model = SkylineAGI32(weights, biases)
+    input_shape = X_train.shape[1]  # Number of input features
+    output_shape = y_train.shape[1]  # Number of output classes
+    skyline_model = create_model(input_shape, output_shape)
 
     # Optimize the hyperparameters
     best_result = skyline_model.optimize_hyperparameters(X_train, y_train, X_val, y_val)
