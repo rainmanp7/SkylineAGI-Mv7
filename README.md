@@ -43,11 +43,11 @@ The following files have been tested, validated, and confirmed to be error-free:
 - `optimization.py removed! model self optimize now`
 - `model.py -self optimization of hyper parameters`
 - `assimilation_memory_module.py -removed`
+- `assimilation.py`
 
 ### Unvalidated Changing Files  
 The following files are under active development and testing:  
 
-- `[assimilation].py`
 - `[main].py`
 
 > *Note: Unvalidated files may contain errors, warnings, or incomplete implementations. These will be updated progressively.*  
