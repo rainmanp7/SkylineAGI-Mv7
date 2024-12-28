@@ -1,10 +1,9 @@
 # main.py
-# Updated Dec 27, 2024
+# Updated to skip domain processing if no valid domains are found
 
 import logging
 import asyncio
 import numpy as np
-import json
 
 # Import necessary modules
 from agi_config import AGIConfiguration
@@ -23,24 +22,6 @@ from assimilation import AssimilationModule
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# **Added get_dataset_path function for centralized dataset management**
-def get_dataset_path(domain: str, level: int) -> str:
-    """
-    Retrieves the dataset path from domain_dataset.json.
-    
-    Args:
-    - domain (str): Domain of the dataset (e.g., 'Math', 'Science')
-    - level (int): Level of the dataset (e.g., 1, 2, 3)
-    
-    Returns:
-    - dataset_path (str): Path to the specified dataset
-    """
-    with open('domain_dataset.json') as f:
-        datasets = json.load(f)
-    # Construct the key to match the updated json structure
-    key = f"level_{level}"
-    return datasets.get(domain, {}).get(key, None)  # Returns None if not found
 
 # Run Startup Diagnostics
 def run_startup_diagnostics() -> bool:
@@ -125,7 +106,13 @@ class SkylineAGI:
         """Asynchronously process a specific domain"""
         try:
             complexity_factor = self.get_complexity_factor(domain)
-            dataset_paths = [get_dataset_path(domain, level) for level in range(1, 4)]  # Assuming levels 1-3
+            # Fetch dataset paths or data from the knowledge_base table, filtered by category
+            query = "SELECT * FROM knowledge_base WHERE category = ?;"
+            dataset_paths = self.database_manager.execute_query(query, (domain,))
+            if not dataset_paths:
+                logger.warning(f"No datasets found for domain: {domain}")
+                return
+
             for i, dataset_path in enumerate(dataset_paths):
                 await self.process_dataset(domain, dataset_path, complexity_factor, i)
         except Exception as e:
@@ -144,13 +131,13 @@ class SkylineAGI:
 
             # Database Update (Example)
             try:
-                self.database_manager.update_dataset_status(domain, dataset_path, "PROCESSED")
+                self.database_manager.update_domain_data(domain, (dataset_path, "PROCESSED"))
             except Exception as db_e:
                 logger.error(f"Database update error (processed): {db_e}")
         except Exception as e:
             logger.error(f"Dataset processing error for {domain} at {dataset_path}: {e}", exc_info=True)
             try:
-                self.database_manager.update_dataset_status(domain, dataset_path, "FAILED")
+                self.database_manager.update_domain_data(domain, (dataset_path, "FAILED"))
             except Exception as db_e:
                 logger.error(f"Database update error (failed): {db_e}")
             raise  # Re-raise the original error for further investigation
@@ -170,7 +157,10 @@ class SkylineAGI:
         try:
             # Placeholder for metacognitive evaluation logic
             processed_datasets = []  # Replace with actual processed datasets
-            await self.metacognitive_manager.evaluate(processed_datasets)
+            if hasattr(self.metacognitive_manager, 'evaluate'):
+                await self.metacognitive_manager.evaluate(processed_datasets)
+            else:
+                logger.error("MetacognitiveManager does not have an 'evaluate' method.")
         except Exception as e:
             logger.error(f"Metacognitive evaluation error: {e}")
 
@@ -179,7 +169,10 @@ class SkylineAGI:
         try:
             # Placeholder for uncertainty quantification logic
             processed_datasets = []  # Replace with actual processed datasets
-            await self.uncertainty_quantifier.quantify(processed_datasets)
+            if hasattr(self.uncertainty_quantifier, 'quantify'):
+                await self.uncertainty_quantifier.quantify(processed_datasets)
+            else:
+                logger.error("UncertaintyQuantification does not have a 'quantify' method.")
         except Exception as e:
             logger.error(f"Uncertainty quantification error: {e}")
 
@@ -190,30 +183,51 @@ async def main():
     agi = SkylineAGI()
 
     try:
+        # Debug: Check database connection and table names
+        db_manager = DatabaseManager()
+        logger.info(f"Database Path: {db_manager.database_path}")
+        logger.info(f"Database Connection: {'Connected' if db_manager.connection else 'Failed'}")
+        table_names = db_manager.get_table_names()
+        logger.info(f"Table Names: {table_names}")
+
+        # Check if the knowledge_base table exists and has data
+        if "knowledge_base" not in table_names:
+            logger.warning("knowledge_base table does not exist. Skipping domain processing.")
+        else:
+            query = "SELECT COUNT(*) FROM knowledge_base;"
+            result = db_manager.execute_query(query)
+            if result and result[0][0] > 0:
+                logger.info("knowledge_base table exists and contains data.")
+            else:
+                logger.warning("knowledge_base table is empty. Skipping domain processing.")
+
         # Define domains to process
-        domains = ['Math', 'Science']  
+        domains = ['Math', 'Science']
 
         # **Filter domains to skip ones without datasets (updated)**
-        valid_domains = [domain for domain in domains if any(get_dataset_path(domain, level) for level in range(1, 4))]
+        valid_domains = []
+        for domain in domains:
+            query = "SELECT * FROM knowledge_base WHERE category = ?;"
+            dataset_paths = db_manager.execute_query(query, (domain,))
+            if dataset_paths:
+                valid_domains.append(domain)
+        logger.info(f"Valid Domains: {valid_domains}")
 
         if not valid_domains:
-            logger.warning("No valid domains with datasets found. Exiting...")
-            return
+            logger.warning("No valid domains with datasets found. Skipping domain processing.")
+        else:
+            # Parallel optimization for valid domains
+            tasks = [
+                asyncio.create_task(
+                    agi.process_domain(domain)
+                )
+                for domain in valid_domains
+            ]
+            await asyncio.gather(*tasks)
 
-        # Parallel optimization for valid domains
-        tasks = [
-            asyncio.create_task(
-                agi.process_domain(domain)
-            )
-            for domain in valid_domains
-        ]
-
-        # Run metacognitive evaluation and uncertainty quantification in parallel
-        tasks.append(asyncio.create_task(agi.run_metacognitive_evaluation()))
-        tasks.append(asyncio.create_task(agi.run_uncertainty_quantification()))
-
-        # Wait for all tasks to complete
-        await asyncio.gather(*tasks)
+        # Run metacognitive evaluation and uncertainty quantification
+        await agi.run_metacognitive_evaluation()
+        await agi.run_uncertainty_quantification()
 
     except Exception as e:
         logger.error(f"Main execution error: {e}", exc_info=True)
@@ -271,3 +285,4 @@ if __name__ == "__main__":
         print(f"An error occurred in the main loop: {e}")
     finally:
         loop.close()
+        
